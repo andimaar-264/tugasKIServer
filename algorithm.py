@@ -23,9 +23,6 @@ class AESEncryptor:
     def encrypt(self, message: str):
         plaintext = message
         ciphertext = self.cipher.encrypt(pad(plaintext, AES.block_size))
-        print(plaintext)
-        print(ciphertext)
-        print(self.cipher.iv)
         return self.iv + ciphertext
     
     def encrypt_file(self, file_name):
@@ -34,6 +31,7 @@ class AESEncryptor:
         enc = self.encrypt(plainttext)
         with open (file_name+'.enc', 'wb') as fo:
             fo.write(enc)
+        print(file_name)
         os.remove(file_name)
 
     def decrypt(self, cipherText):
@@ -48,10 +46,10 @@ class AESEncryptor:
             ciphertext = fo.read()
         dec = self.decrypt(ciphertext)
         plaintext = unpad(dec, AES.block_size)
-        print(plaintext)
-        with open(file_name[:4], 'wb') as fo:
+        newFileDir = os.getcwd() + '/decrypt/' + 'temp'
+        print(newFileDir)
+        with open(newFileDir, 'wb') as fo:
             fo.write(plaintext)
-        os.remove(file_name)
 
     def getAllFiles(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
