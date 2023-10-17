@@ -1,43 +1,56 @@
 from Crypto import Random
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 import os
 import os.path
 from os import listdir
 from os.path import isfile, join
 
 class AESEncryptor:
-    def __init__(self,key):
-        self.key = key
-
-    def pad(self,s):
-        return s+b"\0" * (AES.block_size - len(s) % AES.block_size)
-
-    def encrypt(self, message, key, key_size = 256):
-        message = self.pad(message)
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return iv + cipher.encrypt(message)
+    def __init__(self, key: str):
+        if len(key) == 16:
+            self.key_length = 16
+        elif len(key) == 24:
+            self.key_length = 24
+        elif len(key) == 32:
+            self.key_length = 32
+        else:
+            raise Exception("Key Length invalid.")
+        self.key = key.encode('ASCII')
+        self.iv = Random.new().read(AES.block_size)
+        self.cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+        
+    def encrypt(self, message: str):
+        plaintext = message
+        ciphertext = self.cipher.encrypt(pad(plaintext, AES.block_size))
+        print(plaintext)
+        print(ciphertext)
+        print(self.cipher.iv)
+        return self.iv + ciphertext
     
     def encrypt_file(self, file_name):
         with open(file_name, 'rb') as fo:
             plainttext = fo.read()
-        enc = self.encrypt(plainttext, self.key)
+        enc = self.encrypt(plainttext)
         with open (file_name+'.enc', 'wb') as fo:
             fo.write(enc)
         os.remove(file_name)
 
-    def decrypt(self, cipherText, key):
-        iv = cipherText[:AES.block_size]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plainText = cipher.decrypt(cipherText[AES.block_size:])
-        return plainText.rstrip(b"\0")
+    def decrypt(self, cipherText):
+        plainText = self.cipher.decrypt(cipherText)
+        return plainText
     
     def decrypt_file(self, file_name):
         with open(file_name, 'rb') as fo:
-            cipherText = fo.read()
-        dec = self.decrypt(cipherText, self.key)
+            iv = fo.read(self.key_length)
+            self.iv = iv
+            self.cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+            ciphertext = fo.read()
+        dec = self.decrypt(ciphertext)
+        plaintext = unpad(dec, AES.block_size)
+        print(plaintext)
         with open(file_name[:4], 'wb') as fo:
-            fo.write(dec)
+            fo.write(plaintext)
         os.remove(file_name)
 
     def getAllFiles(self):
