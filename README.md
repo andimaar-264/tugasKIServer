@@ -14,6 +14,6 @@ Algorithm Used:
 3. RC4 = Stream Cipher, deemed quite unsafe, 40-256 bits key
 
 Running Test (10 runs, encryption, image jpg type, 584 kb in size):
-AES average: 0.03018565178
-DES average: 0.008216905594
-RC4 average: 0.005313539505
+- AES average: 0.03018565178
+- DES average: 0.008216905594
+- RC4 average: 0.005313539505
