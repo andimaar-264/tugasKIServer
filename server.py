@@ -64,3 +64,47 @@ def AESHandler() -> json:
             "message": "invalid method."
         }
     )
+
+@api.route('/rc4', methods=['POST', 'GET'])
+def RC4Handler() -> json:
+    username = request.form['username']
+    password = request.form['password']
+    key = request.form['key']
+
+    cur = mysql.connection.cursor()
+    queryString = "SELECT password FROM user WHERE username = '" + username + "'"
+    cur.execute(queryString)
+    rv = cur.fetchall()
+    if password != rv[0][0]:
+        return jsonify(
+            {
+                "message": "invalid username or password"
+            }
+        )
+
+    if request.method == 'POST':
+        f = request.files['file']
+        filePath = 'files/' + f.filename
+        f.save(filePath)
+        f.close()
+        pre_encrypt(filePath, key)
+        print(filePath)
+        return jsonify(
+            {
+                "message": "success!"
+            }
+    )
+
+    if request.method == 'GET':
+        filePath = '/files/' + request.form['filename'] + '.enc'
+        filePathFull = os.getcwd() + filePath
+        pre_decrypt(filePathFull, key)
+        newFileDir = os.getcwd() + '/decrypt/' + 'temp'
+        
+        return send_file(newFileDir) 
+        
+    return jsonify(
+        {
+            "message": "invalid method."
+        }
+    )
