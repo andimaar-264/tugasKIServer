@@ -7,3 +7,13 @@ request here is used to access the form data sent with the request. The username
 - flask <br/>
 Flask is being used as a web framework for this project. for defining API routes and handle HTTP requests and responses.
 - flask-mysqldb
+
+Algorithm Used:
+1. AES = Block Cipher, 128/192/256 bits key
+2. DES = Block Cipher, 56 bits key, 3DES is more secure
+3. RC4 = Stream Cipher, deemed quite unsafe, 40-256 bits key
+
+Running Test (10 runs, encryption, image jpg type, 584 kb in size):
+AES average: 0.03018565178
+DES average: 0.008216905594
+RC4 average: 0.005313539505
