@@ -2,11 +2,13 @@ from flask import Flask, request, jsonify, send_from_directory, Response
 import psycopg2
 import os
 from datetime import datetime
+import base64
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.padding import PKCS7
 from cryptography.hazmat.primitives import padding
 from werkzeug.utils import secure_filename
+from Crypto.Util.Padding import pad, unpad
 
 app = Flask(__name__)
 
@@ -30,22 +32,14 @@ def create_user():
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # generate an Initialization Vector (IV) for this user
-        iv = os.urandom(8) 
+        iv = os.urandom(8)
 
-        backend = default_backend()
+        # Encrypt each data and convert it to bytes
+        encrypted_username = encrypt_data_cbc(username.encode('utf-8'), iv)
+        encrypted_email = encrypt_data_cbc(email.encode('utf-8'), iv)
+        encrypted_password = encrypt_data_cbc(password.encode('utf-8'), iv)
 
-        # create an encryptor for each data
-        username_encryptor = create_encryptor(ENCRYPTION_KEY, iv, backend)
-        email_encryptor = create_encryptor(ENCRYPTION_KEY, iv, backend)
-        password_encryptor = create_encryptor(ENCRYPTION_KEY, iv, backend)
-
-        # encrypt each data
-        encrypted_username = encrypt_data(username, username_encryptor)
-        encrypted_email = encrypt_data(email, email_encryptor)
-        encrypted_password = encrypt_data(password, password_encryptor)
-
-        # insert data into the userss table
+        # Insert data into the userss table
         cursor = database.cursor()
         cursor.execute("INSERT INTO userss (username, email, password, registration_date, iv) VALUES (%s, %s, %s, %s, %s) RETURNING user_id",
                        (encrypted_username, encrypted_email, encrypted_password, datetime.now(), iv))
@@ -58,16 +52,82 @@ def create_user():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-# function for encryptor
-def create_encryptor(key, iv, backend):
-    cipher = Cipher(algorithms.TripleDES(key), modes.CBC(iv), backend=backend)
-    return cipher.encryptor()
+    
+@app.route('/get_user_data/<user_id>', methods=['GET'])
+def get_user_data(user_id):
+    try:
+        cursor = database.cursor()
+        cursor.execute("SELECT username, email, password, iv FROM userss WHERE user_id = %s", (user_id,))
+        result = cursor.fetchone()
+        cursor.close()
 
-# function for decryptor
-def encrypt_data(data, encryptor):
-    padder = padding.PKCS7(64).padder()
-    padded_data = padder.update(data.encode('utf-8')) + padder.finalize()
-    return encryptor.update(padded_data) + encryptor.finalize()
+        if result:
+            username_bytes, email_bytes, password_bytes, iv_bytes = result
+
+            decrypted_username = decrypt_data_cbc(username_bytes)
+            decrypted_email = decrypt_data_cbc(email_bytes)
+            decrypted_password = decrypt_data_cbc(password_bytes)
+
+            return jsonify({
+                "user_id": user_id,
+                "username": decrypted_username,
+                "email": decrypted_email,
+                "password": decrypted_password
+            })
+            
+        return jsonify({"error": "User not found."})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
+def encrypt_data_cbc(data, iv):
+    data = data
+    
+    # Create a TripleDES cipher in CBC mode
+    cipher = Cipher(algorithms.TripleDES(SECRET_KEY), modes.CBC(iv), backend=default_backend())
+    
+    # Encrypt the data
+    encryptor = cipher.encryptor()
+    padder = PKCS7(64).padder()  # 64 is the block size for TripleDES
+    padded_data = padder.update(data) + padder.finalize()
+    cipher_text = encryptor.update(padded_data) + encryptor.finalize()
+    
+    # Combine IV and encrypted data and encode as base64
+    iv_and_data = iv + cipher_text
+    encrypted_data_base64 = base64.b64encode(iv_and_data).decode('utf-8')
+    
+    return encrypted_data_base64
+
+
+def decrypt_data_cbc(data):
+    encrypted_data_base64 = data
+    
+    try:
+        # Ensure that the string length is a multiple of 4 by adding padding characters
+        while len(encrypted_data_base64) % 4 != 0:
+            encrypted_data_base64 += '='
+
+        # Decode base64
+        iv_and_data = base64.b64decode(encrypted_data_base64.encode('utf-8'))
+
+        # Extract IV and encrypted data
+        iv = iv_and_data[:8]
+        encrypted_data = iv_and_data[8:]
+    
+        # Create a TripleDES cipher in CBC mode
+        cipher = Cipher(algorithms.TripleDES(SECRET_KEY), modes.CBC(iv), backend=default_backend())
+
+        # Decrypt the data
+        decryptor = cipher.decryptor()
+        decrypted_data = decryptor.update(encrypted_data) + decryptor.finalize()
+
+        # Remove the padding
+        unpadder = PKCS7(64).unpadder()  # Use the same block size (64) as during encryption
+        original_data = unpadder.update(decrypted_data) + unpadder.finalize()
+    
+        return original_data.decode()
+    except Exception as e:
+        return {"error": str(e)}
 
 # files extensions
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'doc', 'xls', 'jpg', 'png', 'mp4', 'avi', 'jpeg', 'docx'}
