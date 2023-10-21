@@ -1,4 +1,4 @@
-Current Used Packages:
+## Current Used Packages:
 - pycryptodome <br/>
 we use pycryptodome over pycrypto because of a better performance and more up to date. The use of pycryptodome is to ensures that the code is using a reliable and secure library for cryptographic operations.
 - requests <br/>
@@ -17,3 +17,10 @@ Running Test (10 runs, encryption, image jpg type, 584 kb in size):
 - AES average: 0.03018565178
 - DES average: 0.008216905594
 - RC4 average: 0.005313539505
+
+## Cipher Differences
+To measure the running time we measure the data from downloading 10 time. And here is the result.
+
+| AES (16 char)           | DES (16 char)            | RC4(8 char)           |   |   |
+|---------------|----------------|----------------|---|---|
+| 0.03018565178 s | 0.008216905594 s | 0.005313539505 s  |   |   |
