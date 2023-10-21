@@ -21,6 +21,6 @@ Running Test (10 runs, encryption, image jpg type, 584 kb in size):
 ## Cipher Differences
 To measure the running time we measure the data from downloading 10 time. And here is the result.
 
-| AES (16 char)           | DES (16 char)            | RC4(8 char)           |   |   |
-|---------------|----------------|----------------|---|---|
-| 0.03018565178 s | 0.008216905594 s | 0.005313539505 s  |   |   |
+| AES (16 char)           | DES (16 char)            | RC4(8 char)           |
+|---------------|----------------|----------------|
+| 0.03018565178 s | 0.008216905594 s | 0.005313539505 s  |
